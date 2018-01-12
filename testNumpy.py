@@ -7,4 +7,6 @@ x, y = game_generator.get_n_random_games_samples(1)
 
 print(x[0])
 xd, dx = sub.first_player_sequence_into_network_perspective(x[0], 3)
-print(xd , '\n\n', dx)
+print(xd, '\n\n', dx)
+
+
