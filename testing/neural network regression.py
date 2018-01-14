@@ -2,41 +2,39 @@ import tensorflow as tf
 import numpy as np
 
 
-x, y = tf.placeholder(tf.float32, [None, 1]), tf.placeholder(tf.float32, [None, 1])
+x, y = tf.placeholder(tf.float64, [None, 1]), tf.placeholder(tf.float64, [None, 1])
 
 
 def predict(input_data):
-    # Network layout will be like 1, 2, 1
-    hidden_layer_neurones = 128
-    layers_stddev = 1. / hidden_layer_neurones
 
-    w1 = tf.Variable(tf.random_normal([1, hidden_layer_neurones], stddev=layers_stddev))
-    b1 = tf.Variable(tf.random_normal([hidden_layer_neurones], stddev=layers_stddev))
+    # Network layout will be like 1, 2, 1
+    hidden_layer_neurones = 2
+
+    w1 = tf.Variable(tf.random_normal([1, hidden_layer_neurones], dtype=tf.float32), dtype=tf.float32)
+    b1 = tf.Variable(tf.random_normal([hidden_layer_neurones], dtype=tf.float32), dtype=tf.float32)
     layer1 = tf.nn.relu(tf.matmul(input_data, w1) + b1)
 
-    w2 = tf.Variable(tf.random_normal([hidden_layer_neurones, hidden_layer_neurones], stddev=layers_stddev))
-    b2 = tf.Variable(tf.random_normal([hidden_layer_neurones], stddev=layers_stddev))
-    layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
-
-    w2 = tf.Variable(tf.random_normal([hidden_layer_neurones, 1], stddev=layers_stddev))
-    b2 = tf.Variable(tf.random_normal([1], stddev=layers_stddev))
-    output_layer = tf.matmul(layer2, w2) + b2
+    w2 = tf.Variable(tf.random_normal([hidden_layer_neurones, 1], dtype=tf.float32), dtype=tf.float32)
+    b2 = tf.Variable(tf.random_normal([1], dtype=tf.float32), dtype=tf.float32)
+    output_layer = tf.matmul(layer1, w2) + b2
 
     return output_layer
 
 
 def train_network(data, labels):
     prediction = predict(data)
-    square_error_cost = tf.reduce_sum(tf.square(labels - prediction))
+    square_error_cost = tf.losses.mean_squared_error(labels=labels, predictions=prediction)
 
-    optimizer = tf.train.AdamOptimizer().minimize(square_error_cost)
+    optimizer = tf.train.AdamOptimizer(learning_rate=.001).minimize(square_error_cost)
     optimized = tf.train.Saver()
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        for i in range(100000):
+        for i in range(10000):
             _, o = sess.run([optimizer, square_error_cost], feed_dict={x: data, y: labels})
-            print("LOOP: ", i, " is Done. Cost :", o)
+
+            if i % 100 == 0:
+                print("LOOP:  ", i, " is Done. Cost :", o)
 
         optimized.save(sess, save_path='/tmp/model.ckpt')
 
@@ -52,20 +50,11 @@ def predict_optimized(data):
 
     return out_data
 
-    pass
-
-
-def shuffle(a, b):
-    seed = np.random.random_integers(10000)
-    np.random.seed(seed)
-    np.random.shuffle(a)
-    np.random.seed(seed)
-    np.random.shuffle(b)
-
 
 my_data = np.arange(100, dtype=np.float32).reshape(100, 1)
-my_labels = my_data * my_data
+my_labels = 9 * my_data + 15
 
-train_network(my_data, my_labels)
+# train_network(my_data, my_labels)
 
-
+belal = predict_optimized([[300.]])
+print(belal)
