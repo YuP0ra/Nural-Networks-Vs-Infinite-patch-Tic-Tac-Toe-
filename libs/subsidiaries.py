@@ -15,3 +15,20 @@ def first_player_sequence_into_network_perspective(sequence, n):
         data[i] = labels[i - 1]
 
     return data[:hn], labels[:hn]
+
+
+def win_lose_probability_from_gs(sequence, label, n):
+    length, index, flipper = len(sequence) + 1, 1, 1
+
+    data = np.zeros((length, n * n), dtype=np.float32)
+    labels = np.ones(length, dtype=np.float32) * label
+
+    while index < length:
+        if sequence[index - 1] == -1:
+            break
+        else:
+            data[index] = data[index - 1]
+            data[index, sequence[index - 1]] = flipper
+            index, flipper = index + 1, flipper * - 1
+
+    return data[:index], labels[:index]
