@@ -2,19 +2,22 @@ import numpy as np
 
 
 def first_player_sequence_into_network_perspective(sequence, n):
-    hn = n * n // 2 + 1
-    data = np.zeros(hn * n * n).reshape(hn, n * n)
-    labels = np.zeros(hn * n * n).reshape(hn, n * n)
+    total_array_size, index, sample_size = n * n * len(sequence), 0, n * n
 
-    labels[0, sequence[0]] = 1
-    for i in range(1, hn):
-        if sequence[i * 2] == -1:
-            hn = i
-            break
-        labels[i, sequence[i * 2]] = 1
-        data[i] = labels[i - 1]
+    present_state = np.zeros((total_array_size,sample_size), dtype=np.float32)
+    next_state = np.zeros((total_array_size, sample_size), dtype=np.float32)
 
-    return data[:hn], labels[:hn]
+    for sec in sequence:
+        for i in range(sample_size // 2):
+            if sec[i] == -1:
+                break
+            else:
+                index = index + 1
+                next_state[index - 1, sec[i]] = 1
+                present_state[index] = next_state[index - 1]
+                i += 2
+
+    return present_state[:index], next_state[:index]
 
 
 def win_lose_probability_from_gs(sequence, label, n):

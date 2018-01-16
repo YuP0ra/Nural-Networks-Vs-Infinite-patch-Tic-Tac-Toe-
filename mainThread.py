@@ -1,22 +1,22 @@
-from libs import games_generator, subsidiaries
+from libs import games_generator, subsidiaries, neural_network
 import numpy as np
 
-for _ in range(10):
-    samples_count, game_size, indexer = 10000, 9, 0
 
-    all_data = np.zeros((samples_count * game_size * game_size, game_size * game_size))
-    all_labels = np.zeros(samples_count * game_size * game_size)
+def training_data(samples_count, game_size):
 
-    gg = games_generator.TicGameGenerator(game_size, 5)
+    gg = games_generator.TicGameGenerator(game_size, game_size)
     x, y = gg.get_n_random_games_samples(samples_count)
+    return subsidiaries.first_player_sequence_into_network_perspective(x[np.where(y == 1)], game_size)
 
-    for i in range(len(x)):
-        dx, dy = x[i], y[i]
-        q, w = subsidiaries.win_lose_probability_from_gs(dx, dy, game_size)
-        prev_pos, indexer = indexer, indexer + len(q)
-        all_data[prev_pos:indexer], all_labels[prev_pos:indexer] = q, w
 
-    all_data, all_labels = all_data[:indexer], all_labels[:indexer]
+my_network = neural_network.NeuralNetworkFourHiddenLayers([9, 80, 80, 80, 9], name='alpha')
+print('Neural Network got initialized')
 
-    all_data.astype(np.int8).tofile('data_sets\\ready_to_train_data' + str(_))
-    all_labels.astype(np.int8).tofile('data_sets\\ready_to_train_labels' + str(_))
+
+for i in range(100):
+    print('Working on loop:', i)
+    data, labels = training_data(100, 3)
+    my_network.train_network(data, labels)
+
+    res = my_network.predict_optimized(np.zeros(9, dtype=np.float32).reshape(1, 9)) * 100
+    print(res.astype(int))

@@ -125,4 +125,3 @@ class TicGameGenerator:
                     return move_color
 
         return 0
-
