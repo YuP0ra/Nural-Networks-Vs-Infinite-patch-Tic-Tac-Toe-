@@ -59,23 +59,24 @@ class TicGameGenerator:
         self.__vertical_evaluation_matrix[vrt_ev_index] += 1
         self.__horizontal_evaluation_matrix[hrz_ev_index] += 1
 
-        digonals_offset = 0 if move_color is -1 else self.__valid_diagonals
-        winning_offset = self.__board_diameter - self.__win_diameter
+        diagonals_offset = 0 if move_color == 1 else self.__valid_diagonals
 
-        digonal_a_index = digonals_offset + winning_offset + row_index - col_index
-        digonal_b_index = digonals_offset + winning_offset + self.__board_diameter - 1 - row_index - col_index
+        diagonal_a_index = abs(row_index - col_index)
+        diagonal_b_index = abs(self.__board_diameter - row_index - col_index - 1)
 
-        if digonal_a_index - digonals_offset < self.__valid_diagonals:
-            self.__diagonal_a_evaluation_matrix[digonal_a_index] += 1
+        if diagonal_a_index <= self.__valid_diagonals // 2:
+            diagonal_a_index = diagonals_offset + self.__valid_diagonals // 2 + row_index - col_index
+            self.__diagonal_a_evaluation_matrix[diagonal_a_index] += 1
         else:
-            digonal_a_index = -1
+            diagonal_a_index = -1
 
-        if digonal_b_index - digonals_offset < self.__valid_diagonals:
-            self.__diagonal_b_evaluation_matrix[digonal_b_index] += 1
+        if diagonal_b_index <= self.__valid_diagonals // 2:
+            diagonal_b_index = diagonals_offset + self.__valid_diagonals // 2 + self.__board_diameter - 1 - row_index - col_index
+            self.__diagonal_b_evaluation_matrix[diagonal_b_index] += 1
         else:
-            digonal_b_index = -1
+            diagonal_b_index = -1
 
-        return vh_offset, row_index, col_index, digonal_a_index, digonal_b_index
+        return vh_offset, row_index, col_index, diagonal_a_index, diagonal_b_index
 
     def __check_board_state(self, board, last_play_pos, move_color):
         o, a, b, c, d = self.__update_evaluations(last_play_pos, move_color)

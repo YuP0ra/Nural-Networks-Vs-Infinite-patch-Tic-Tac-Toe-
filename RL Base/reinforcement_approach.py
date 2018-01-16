@@ -1,5 +1,11 @@
 from libs import tic_judge
-import tensorflow as tf
 import numpy as np
 
-rl_judge = tic_judge.Judge(3, 3)
+rl_judge = tic_judge.Judge(3, 2)
+wallet = tic_judge.MovesWallet(9)
+
+rl_judge.initialize_new_board()
+
+
+print(rl_judge.set_next_move(1, 1))
+print(rl_judge.set_next_move(5, 1))
