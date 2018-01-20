@@ -1,10 +1,11 @@
+from libs import tic_judge, subsidiaries
 import numpy as np
 
-# 10M
-length = 10000000
-
-tons_of_zeros = np.zeros(length)
+GAME_SIZE = 10
+wallet = tic_judge.ActionsWallet(GAME_SIZE)
 
 
-tons_of_zeros.tofile('uncompressed')
-np.savez_compressed(file='compressed', data=tons_of_zeros)
+wallet.initialize_new_wallet()
+
+for i in range(GAME_SIZE):
+    print(np.random.ranf())

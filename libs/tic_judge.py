@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 
 class Judge:
@@ -26,7 +27,7 @@ class Judge:
         self.__diagonal_a_evaluation_matrix *= 0
         self.__diagonal_b_evaluation_matrix *= 0
 
-    def set_next_move(self, pos, signature):
+    def step(self, pos, signature):
         self.__board[pos] = signature
         result = self.__check_board_state(self.__board, pos, signature)
         return result
@@ -113,21 +114,28 @@ class Judge:
         return 0
 
 
-class MovesWallet:
+class ActionsWallet:
     def __init__(self, size):
-        self.size, self.hi_index = size, size
-        self.wallet = np.arange(size)
+        self.size = size
+        self.actions = set(np.arange(size))
+        self.actions_lef = size
 
     def initialize_new_wallet(self):
-        self.hi_index = self.size
-        self.wallet = np.arange(self.size)
+        self.actions = set(np.arange(self.size))
+        self.actions_lef = self.size
 
-    def remove_move(self, index):
-        self.hi_index -= 1
-        self.wallet[self.hi_index] = self.wallet[index]
+    def remove_action(self, action):
+        if self.valid_action(action):
+            self.actions.remove(action)
+            self.actions_lef -= 1
 
-    def get_random_move(self):
-        rnd = np.random.random_integers(0, self.hi_index)
-        val = self.wallet[rnd]
-        self.remove_move(rnd)
-        return val
+    def valid_action(self, action):
+        if action in self.actions:
+            return True
+        return False
+
+    def get_random_action(self):
+        if self.actions_lef > 0:
+            action = random.sample(self.actions, 1)[0]
+            self.remove_action(action)
+            return action

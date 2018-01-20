@@ -2,6 +2,7 @@ import numpy as np
 
 
 def first_player_sequence_into_network_perspective(sequence, n):
+    print(sequence)
     total_array_size, index, sample_size = n * n * len(sequence), 0, n * n
 
     present_state = np.zeros((total_array_size,sample_size), dtype=np.float32)
