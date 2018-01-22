@@ -2,10 +2,7 @@ from libs import tic_judge, subsidiaries
 import numpy as np
 
 GAME_SIZE = 10
-wallet = tic_judge.ActionsWallet(GAME_SIZE)
 
+x = np.eye(GAME_SIZE)[7]
 
-wallet.initialize_new_wallet()
-
-for i in range(GAME_SIZE):
-    print(np.random.ranf())
+print(x)
