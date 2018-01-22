@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 # Hyper parameters
-RANDOMIZATION_RATE = 1.
+RANDOMIZATION_RATE = .2
 DISCOUNTED_RATE = 0.95
 LEARNING_RATE = 0.001
 EPISODES_NUM = 100000
@@ -26,10 +26,10 @@ y_holder = tf.placeholder(tf.float32, [None, GAME_SIZE])
 
 
 # Network weights and biases.
-layer1_weights = tf.Variable(tf.ones([GAME_SIZE, HIDDEN_NUM]))
-layer1_biases = tf.Variable(tf.zeros([HIDDEN_NUM]))
-layer2_weights = tf.Variable(tf.random_uniform([HIDDEN_NUM, GAME_SIZE]))
-layer2_biases = tf.Variable(tf.ones([GAME_SIZE]))
+layer1_weights = tf.Variable(tf.random_normal([GAME_SIZE, HIDDEN_NUM]))
+layer1_biases = tf.Variable(tf.random_normal([HIDDEN_NUM]))
+layer2_weights = tf.Variable(tf.random_normal([HIDDEN_NUM, GAME_SIZE]))
+layer2_biases = tf.Variable(tf.random_normal([GAME_SIZE]))
 
 
 # The FeedForward part of the network.
@@ -138,8 +138,7 @@ with tf.Session() as sess:
                 break
 
         if i % 1000 == 0:
-            RANDOMIZATION_RATE *= 0.95
             acc = int(100 * (true / ji))
             wrt = int(100 * (wins / 1000.))
-            print('WinRate:', wrt, 'Valid Acc:', acc)
+            print('WinRate:', wrt, 'Valid Acc:', acc, np.argmax(action_buffer[0]))
             ji, wins, true = 0, 1, 1
