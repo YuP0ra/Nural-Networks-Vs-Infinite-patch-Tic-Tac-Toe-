@@ -3,11 +3,11 @@ import tensorflow as tf
 import numpy as np
 
 # Hyper parameters
-RANDOMIZATION_RATE = .2
+RANDOMIZATION_RATE = 1.
 DISCOUNTED_RATE = 0.95
 LEARNING_RATE = 0.001
-EPISODES_NUM = 100000
-HIDDEN_NUM = 181
+EPISODES_NUM = 1000000
+HIDDEN_NUM = 81
 GAME_SIZE = 9
 GAME_COLS = 3
 
@@ -28,15 +28,18 @@ y_holder = tf.placeholder(tf.float32, [None, GAME_SIZE])
 # Network weights and biases.
 layer1_weights = tf.Variable(tf.random_normal([GAME_SIZE, HIDDEN_NUM]))
 layer1_biases = tf.Variable(tf.random_normal([HIDDEN_NUM]))
-layer2_weights = tf.Variable(tf.random_normal([HIDDEN_NUM, GAME_SIZE]))
-layer2_biases = tf.Variable(tf.random_normal([GAME_SIZE]))
+layer2_weights = tf.Variable(tf.random_normal([HIDDEN_NUM, HIDDEN_NUM]))
+layer2_biases = tf.Variable(tf.random_normal([HIDDEN_NUM]))
+layer3_weights = tf.Variable(tf.random_normal([HIDDEN_NUM, GAME_SIZE]))
+layer3_biases = tf.Variable(tf.random_normal([GAME_SIZE]))
 
 
 # The FeedForward part of the network.
 def feed_forward(input_data):
     layer1_output = tf.nn.relu(tf.matmul(input_data, layer1_weights) + layer1_biases)
-    layer2_output = tf.matmul(layer1_output, layer2_weights) + layer2_biases
-    return layer2_output
+    layer2_output = tf.nn.relu(tf.matmul(layer1_output, layer2_weights) + layer2_biases)
+    layer3_output = tf.matmul(layer2_output, layer3_weights) + layer3_biases
+    return layer3_output
 
 
 # The actions space of the network, Losses and the Optimizer.
@@ -45,16 +48,17 @@ loss = tf.losses.mean_squared_error(predictions=prediction, labels=y_holder)
 optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
 update = optimizer.minimize(loss)
 
-
-print('Going Into the Session')
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    ji, wins, true = 0, 1, 1
+    index, wins = 0, 1
 
     # The main loop where we:
     # 1: Play a game till the end
     # 2: Sum the rewards and discounted reward
     # 3: back prop the network to update the new weights
+
+    long_term_states = np.zeros(shape=(1000 * GAME_SIZE, GAME_SIZE))
+    long_term_values = np.zeros(shape=(1000 * GAME_SIZE, GAME_SIZE))
 
     for i in range(EPISODES_NUM):
         # new board and wallet to keep a clean record
@@ -70,8 +74,6 @@ with tf.Session() as sess:
         temp_board = np.zeros(shape=(1, GAME_SIZE), dtype=np.float32)
 
         for j in range(GAME_SIZE):
-            ji += 1
-
             # Run a feedForward to get the actions space
             network_q_output = sess.run([prediction], feed_dict={x_holder: temp_board})
             chosen_action = np.argmax(network_q_output[0])
@@ -80,7 +82,6 @@ with tf.Session() as sess:
             if wallet.valid_action(chosen_action) is False:
                 chosen_action = wallet.get_random_action()
             else:
-                true += 1
                 # Make sure the network chose some random actions from a time to time.
                 # That's must be done so we won't stuck on some fixed path.
                 if np.random.ranf() < RANDOMIZATION_RATE:
@@ -102,21 +103,25 @@ with tf.Session() as sess:
             if reward == 1:
                 action_buffer, states_buffer, actions, rewards = \
                     action_buffer[:j + 1], states_buffer[:j + 1], actions[:j + 1], rewards[:j + 1]
-                wins, rewards[j] = wins + 1, 1
+                wins, rewards[j] = wins + 1, 2
 
                 RL_Policies.update_action_value(action_buffer, actions, rewards)
-                _ = sess.run([update], feed_dict={x_holder: states_buffer, y_holder: action_buffer})
+                long_term_states[index: index + j + 1] = states_buffer
+                long_term_values[index: index + j + 1] = action_buffer
+                index = index + j + 1
                 break
 
             """ -------------------------------------------------------------------------------------------------------
                                                               Draw! 
              ------------------------------------------------------------------------------------------------------- """
             if j >= GAME_SIZE // 2:
+                rewards[j] = -.5
                 action_buffer, states_buffer, actions, rewards = \
                     action_buffer[:j + 1], states_buffer[:j + 1], actions[:j + 1], rewards[:j + 1]
                 RL_Policies.update_action_value(action_buffer, actions, rewards)
-
-                _ = sess.run([update], feed_dict={x_holder: states_buffer, y_holder: action_buffer})
+                long_term_states[index: index + j + 1] = states_buffer
+                long_term_values[index: index + j + 1] = action_buffer
+                index = index + j + 1
                 break
 
             """ -------------------------------------------------------------------------------------------------------
@@ -128,14 +133,17 @@ with tf.Session() as sess:
             if reward == -1:
                 action_buffer, states_buffer, actions, rewards = \
                     action_buffer[:j + 1], states_buffer[:j + 1], actions[:j + 1], rewards[:j + 1]
-                rewards[j] = -1
+                rewards[j] = -2
 
                 RL_Policies.update_action_value(action_buffer, actions, rewards)
-                _ = sess.run([update], feed_dict={x_holder: states_buffer, y_holder: action_buffer})
+                long_term_states[index: index + j + 1] = states_buffer
+                long_term_values[index: index + j + 1] = action_buffer
+                index = index + j + 1
                 break
 
         if i % 1000 == 0:
-            acc = int(100 * (true / ji))
+            RANDOMIZATION_RATE *= 0.98
             wrt = int(100 * (wins / 1000.))
-            print('WinRate:', wrt, 'Valid Acc:', acc, np.argmax(action_buffer[0]))
-            ji, wins, true = 0, 1, 1
+            print('EP: {}\tWinRate: {}'.format(i // 1000, wrt))
+            _ = sess.run([update], feed_dict={x_holder: long_term_states[:index], y_holder: long_term_values[:index]})
+            index, wins = 0, 1
