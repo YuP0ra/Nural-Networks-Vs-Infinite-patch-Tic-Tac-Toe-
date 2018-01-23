@@ -1,12 +1,11 @@
 import numpy as np
 
 
-def update_action_value(Q, states, actions, rewards, learning_rate=0.1, alpha=0.99):
+def update_action_value(Q, actions, rewards, learning_rate=0.1, alpha=0.99):
     """
     Calculate the actions value vector to train the function approximation.
 
     :param Q: The Quality matrix that will be updated
-    :param states: 1D vector of all the state with any size
     :param actions: 1D vector of the action related to evey state
     :param rewards: 1D vector of evey state reward
     :param learning_rate: the learning rate
@@ -21,7 +20,6 @@ def update_action_value(Q, states, actions, rewards, learning_rate=0.1, alpha=0.
     for t in reversed(range(len(rewards) - 1)):
         rewards[t] = rewards[t] + alpha * rewards[t + 1]
 
-        s, s_ = states[t], states[t + 1]
-        a, a_ = actions[t], actions[t + 1]
+        s, s_, a, a_ = t, t + 1, actions[t], actions[t + 1]
 
         Q[s, a] = Q[s, a] + learning_rate * ((rewards[t] + alpha * Q[s_, a_]) - Q[s, a])

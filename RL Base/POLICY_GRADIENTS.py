@@ -1,4 +1,4 @@
-from libs import tic_judge, subsidiaries
+from libs import tic_judge, RL_Policies
 import tensorflow as tf
 import numpy as np
 
@@ -41,13 +41,12 @@ def feed_forward(input_data):
 
 # The actions space of the network, Losses and the Optimizer.
 prediction = feed_forward(x_holder)
-# loss = tf.losses.softmax_cross_entropy(logits=actions, onehot_labels=y_holder)
 loss = tf.losses.mean_squared_error(predictions=prediction, labels=y_holder)
-optimizer = tf.train.GradientDescentOptimizer(learning_rate=LEARNING_RATE)
+optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
 update = optimizer.minimize(loss)
 
-print('Going Into the Session')
 
+print('Going Into the Session')
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     ji, wins, true = 0, 1, 1
@@ -66,14 +65,12 @@ with tf.Session() as sess:
         states_buffer = np.zeros(shape=(GAME_SIZE, GAME_SIZE), dtype=np.float32)
         action_buffer = np.zeros(shape=(GAME_SIZE, GAME_SIZE), dtype=np.float32)
         actions = np.zeros(GAME_SIZE, dtype=int)
+        rewards = np.zeros(GAME_SIZE, dtype=int)
         # Temp game board, we'll keep updating it and feed it to the network
         temp_board = np.zeros(shape=(1, GAME_SIZE), dtype=np.float32)
 
         for j in range(GAME_SIZE):
             ji += 1
-            # Check if the game reached the end
-            if j >= GAME_SIZE // 2:
-                break
 
             # Run a feedForward to get the actions space
             network_q_output = sess.run([prediction], feed_dict={x_holder: temp_board})
@@ -92,49 +89,49 @@ with tf.Session() as sess:
                     wallet.remove_action(chosen_action)
 
             # Add the state to the buffers
+            rewards[j] = -0.1
             actions[j] = chosen_action
             states_buffer[j] = temp_board[0]
             action_buffer[j] = network_q_output[0]
 
-            # Keep tracking of the temp board
+            """ -------------------------------------------------------------------------------------------------------
+                                                        Network Turn 
+             ------------------------------------------------------------------------------------------------------- """
             temp_board[0, chosen_action] = 1
-
-            # Feed the action to the jude and wait for reward
-            # The jude take and index in which we play. 1 means X
             reward = rl_judge.step(chosen_action, 1)
-
-            # Game ended. Do the next:
-            # 1. Calculate the discounted reward
-            # 2. Train with the new data
-            # 3. Break the loop
-
             if reward == 1:
-                wins += 1
-                action_buffer[j + 1] = np.zeros(GAME_SIZE)
-                for s in reversed(range(0, j)):
-                    a, a_ = actions[s], actions[s + 1]
-                    action_buffer[s, a] = action_buffer[s, a] +\
-                                    0.1 * (reward + DISCOUNTED_RATE * action_buffer[s + 1, a_] - action_buffer[s, a])
+                action_buffer, states_buffer, actions, rewards = \
+                    action_buffer[:j + 1], states_buffer[:j + 1], actions[:j + 1], rewards[:j + 1]
+                wins, rewards[j] = wins + 1, 1
 
-                _ = sess.run([update], feed_dict={x_holder: states_buffer[:j], y_holder: action_buffer[:j]})
+                RL_Policies.update_action_value(action_buffer, actions, rewards)
+                _ = sess.run([update], feed_dict={x_holder: states_buffer, y_holder: action_buffer})
                 break
 
-            # Random bot turn
+            """ -------------------------------------------------------------------------------------------------------
+                                                              Draw! 
+             ------------------------------------------------------------------------------------------------------- """
+            if j >= GAME_SIZE // 2:
+                action_buffer, states_buffer, actions, rewards = \
+                    action_buffer[:j + 1], states_buffer[:j + 1], actions[:j + 1], rewards[:j + 1]
+                RL_Policies.update_action_value(action_buffer, actions, rewards)
+
+                _ = sess.run([update], feed_dict={x_holder: states_buffer, y_holder: action_buffer})
+                break
+
+            """ -------------------------------------------------------------------------------------------------------
+                                                         Random Bot Turn 
+             ------------------------------------------------------------------------------------------------------- """
             bot_action = wallet.get_random_action()
             reward = rl_judge.step(bot_action, -1)
-
-            # Keep tracking of the temp board
             temp_board[0, bot_action] = -1
-
             if reward == -1:
-                action_buffer[j + 1] = np.zeros(GAME_SIZE)
+                action_buffer, states_buffer, actions, rewards = \
+                    action_buffer[:j + 1], states_buffer[:j + 1], actions[:j + 1], rewards[:j + 1]
+                rewards[j] = -1
 
-                for s in reversed(range(0, j)):
-                    a, a_ = actions[s], actions[s + 1]
-                    action_buffer[s, a] = action_buffer[s, a] +\
-                                    0.1 * (reward + DISCOUNTED_RATE * action_buffer[s + 1, a_] - action_buffer[s, a])
-
-                _ = sess.run([update], feed_dict={x_holder: states_buffer[:j], y_holder: action_buffer[:j]})
+                RL_Policies.update_action_value(action_buffer, actions, rewards)
+                _ = sess.run([update], feed_dict={x_holder: states_buffer, y_holder: action_buffer})
                 break
 
         if i % 1000 == 0:
